@@ -11,7 +11,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Doctrine\DBAL\Connection;
-
+use Symfony\Component\BrowserKit\Response;
 
 class EvaluationController extends AbstractController
 {
@@ -102,36 +102,36 @@ class EvaluationController extends AbstractController
             $secretKey = $_ENV['JWT_SECRET'];
             $decodedToken = JWT::decode($token, new Key($secretKey, 'HS256'));
             $userId = $decodedToken->sub; // Assurez-vous que le token contient un champ 'sub' avec l'ID utilisateur
-        
+
             if (!$userId) {
                 return new JsonResponse(['error' => 'Invalid user ID'], 401);
             }
-        
-            $content = $request->getContent();
-        
-            // Décoder le JSON en tableau PHP
-            $data = json_decode($content, true);
 
-    
+            // $content = $request->getContent();
+
+            // Décoder le JSON en tableau PHP
+            // $data = json_decode($content, true);
+
+
             $sql = "SELECT alignment.id as ID, evaluation.id as evaluation_id, alignment.*, evaluation.* 
                     FROM alignment 
                     JOIN evaluation ON evaluation.alignment_id = alignment.id
                     WHERE evaluation.user_id = :user_id";
-        
+
             $sqlCount = "SELECT COUNT(*) as total  
                         FROM alignment 
                         JOIN evaluation ON evaluation.alignment_id = alignment.id
                         WHERE evaluation.user_id = :user_id";
-        
+
             try {
                 $results = $connection->fetchAllAssociative($sql, ['user_id' => $userId]);
                 $countTotal = $connection->fetchOne($sqlCount, ['user_id' => $userId]);
                 $count = (int) $countTotal;
-        
+
                 if (empty($results)) {
                     return new JsonResponse(['message' => 'No data found'], 200);
                 }
-        
+
                 return new JsonResponse(['results' => $results, 'count' => $count]);
             } catch (\Exception $e) {
                 return new JsonResponse(['error' => $e->getMessage()], 500);
@@ -156,7 +156,7 @@ class EvaluationController extends AbstractController
             $secretKey = $_ENV['JWT_SECRET'];
             $decodedToken = JWT::decode($token, new Key($secretKey, 'HS256'));
             $userId = $decodedToken->sub; // Assurez-vous que le token contient un champ 'sub' avec l'ID utilisateur
-        
+
             if (!$userId) {
                 return new JsonResponse(['error' => 'Invalid user ID'], 401);
             }
@@ -167,5 +167,27 @@ class EvaluationController extends AbstractController
         } catch (\Exception $e) {
             return new JsonResponse(['error' => 'Invalid token'], 401);
         }
+    }
+
+    #[Route('/api/comment/{id}', name: 'app_comment')]
+    public function comment(Evaluation $evaluation, EntityManagerInterface $em, Request $request): JsonResponse
+    {
+        $content = $request->getContent();
+        // Décoder le JSON en tableau PHP
+        $data = json_decode($content, true);
+
+        // Vérifier si le commentaire est bien envoyé
+        $comment = $data['comment'] ?? null;
+
+        if (!$comment) {
+            return new JsonResponse(['error' => 'Comment not provided'], 400); // Bad request si le commentaire est absent
+        }
+
+        // Mettre à jour l'évaluation avec le commentaire (logique d'exemple)
+        $evaluation->setComment($comment); // Si la colonne comment existe dans l'entité Evaluation
+        $em->persist($evaluation);
+        $em->flush();
+
+        return new JsonResponse(['message' => 'Comment saved successfully', 'comment' => $comment], 200);
     }
 }

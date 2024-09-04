@@ -29,6 +29,9 @@ class Evaluation
     #[ORM\Column(nullable: true)]
     private ?bool $validate = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $validateur_id = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -88,6 +91,18 @@ class Evaluation
     public function setValidate(?bool $validate): static
     {
         $this->validate = $validate;
+
+        return $this;
+    }
+
+    public function getValidateurId(): ?int
+    {
+        return $this->validateur_id;
+    }
+
+    public function setValidateurId(?int $validateur_id): static
+    {
+        $this->validateur_id = $validateur_id;
 
         return $this;
     }
