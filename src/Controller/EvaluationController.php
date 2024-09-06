@@ -11,14 +11,12 @@ use Symfony\Component\Routing\Attribute\Route;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Doctrine\DBAL\Connection;
-use Symfony\Component\BrowserKit\Response;
 
 class EvaluationController extends AbstractController
 {
     #[Route('/api/evaluate', name: 'api_evaluate', methods: ['POST'])]
     public function evaluate(Request $request, EntityManagerInterface $em): JsonResponse
     {
-        error_log('Entering evaluate method');
 
         // Récupérer le token depuis les cookies
         $token = $request->cookies->get('token');
@@ -97,49 +95,65 @@ class EvaluationController extends AbstractController
             return new JsonResponse(['error' => 'Token not found'], 401);
         }
 
+        $content = $request->getContent();
+        error_log('Received content: ' . $content);
+
+        // Décoder le JSON en tableau PHP
+        $data = json_decode($content, true);
+        $lastId = isset($data['lastId']) ? (int)$data['lastId'] : 0;
+
         // Décoder le token pour obtenir l'utilisateur connecté
         try {
             $secretKey = $_ENV['JWT_SECRET'];
+            error_log('JWT Secret: ' . $secretKey);
             $decodedToken = JWT::decode($token, new Key($secretKey, 'HS256'));
-            $userId = $decodedToken->sub; // Assurez-vous que le token contient un champ 'sub' avec l'ID utilisateur
+            error_log('Decoded Token: ' . print_r($decodedToken, true));
 
+            $userId = $decodedToken->sub ?? null; // Assurez-vous que le token contient un champ 'sub'
             if (!$userId) {
                 return new JsonResponse(['error' => 'Invalid user ID'], 401);
             }
 
-            // $content = $request->getContent();
-
-            // Décoder le JSON en tableau PHP
-            // $data = json_decode($content, true);
-
-
             $sql = "SELECT alignment.id as ID, evaluation.id as evaluation_id, alignment.*, evaluation.* 
-                    FROM alignment 
-                    JOIN evaluation ON evaluation.alignment_id = alignment.id
-                    WHERE evaluation.user_id = :user_id";
+                FROM alignment 
+                JOIN evaluation ON evaluation.alignment_id = alignment.id
+                WHERE evaluation.id > ? AND evaluation.user_id = ? order by evaluation.id LIMIT 10 ";
 
             $sqlCount = "SELECT COUNT(*) as total  
-                        FROM alignment 
-                        JOIN evaluation ON evaluation.alignment_id = alignment.id
-                        WHERE evaluation.user_id = :user_id";
+                     FROM alignment 
+                     JOIN evaluation ON evaluation.alignment_id = alignment.id
+                     WHERE evaluation.user_id = ?";
 
             try {
-                $results = $connection->fetchAllAssociative($sql, ['user_id' => $userId]);
-                $countTotal = $connection->fetchOne($sqlCount, ['user_id' => $userId]);
+                error_log('Executing SQL: ' . $sql);
+                $results = $connection->fetchAllAssociative($sql, [$lastId, $userId]);
+                $countTotal = $connection->fetchOne($sqlCount, [$userId]);
                 $count = (int) $countTotal;
 
                 if (empty($results)) {
                     return new JsonResponse(['message' => 'No data found'], 200);
                 }
 
-                return new JsonResponse(['results' => $results, 'count' => $count]);
+                // Après avoir récupéré les résultats dans la variable $results
+                $evaluationIds = array_column($results, 'evaluation_id'); // Récupère tous les evaluation_id
+                $maxEvaluationId = !empty($evaluationIds) ? max($evaluationIds) : null; // Récupère le maximum
+                return new JsonResponse(
+                    [
+                        'results' => $results,
+                        'count' => $count,
+                        'lastId' => $maxEvaluationId
+                    ]
+                );
             } catch (\Exception $e) {
+                error_log('SQL Error: ' . $e->getMessage());
                 return new JsonResponse(['error' => $e->getMessage()], 500);
             }
         } catch (\Exception $e) {
+            error_log('Token Error: ' . $e->getMessage());
             return new JsonResponse(['error' => 'Invalid token'], 401);
         }
     }
+
 
     #[Route('/api/evaluation/{id}', name: 'api_evaluation_delete')]
     public function evaluation_delete(Evaluation $evaluation, Request $request, EntityManagerInterface $em): JsonResponse
@@ -169,25 +183,69 @@ class EvaluationController extends AbstractController
         }
     }
 
-    #[Route('/api/comment/{id}', name: 'app_comment')]
-    public function comment(Evaluation $evaluation, EntityManagerInterface $em, Request $request): JsonResponse
+    #[Route('/api/comment', name: 'app_comment')]
+    public function comment(EntityManagerInterface $em, Request $request): JsonResponse
     {
-        $content = $request->getContent();
-        // Décoder le JSON en tableau PHP
-        $data = json_decode($content, true);
-
-        // Vérifier si le commentaire est bien envoyé
-        $comment = $data['comment'] ?? null;
-
-        if (!$comment) {
-            return new JsonResponse(['error' => 'Comment not provided'], 400); // Bad request si le commentaire est absent
+        // Récupérer le token depuis les cookies
+        $token = $request->cookies->get('token');
+        if (!$token) {
+            error_log('Token not provided');
+            return new JsonResponse(['message' => 'Token not provided'], 401);
         }
 
-        // Mettre à jour l'évaluation avec le commentaire (logique d'exemple)
-        $evaluation->setComment($comment); // Si la colonne comment existe dans l'entité Evaluation
-        $em->persist($evaluation);
-        $em->flush();
+        // Décoder le token JWT
+        try {
+            $secretKey = $_ENV['JWT_SECRET'];
+            if (!$secretKey) {
+                throw new \Exception('JWT Secret Key not set');
+            }
+            $decodedToken = JWT::decode($token, new Key($secretKey, 'HS256'));
+            error_log('Token successfully decoded');
+        } catch (\Exception $e) {
+            error_log('Error decoding token: ' . $e->getMessage());
+            return new JsonResponse(['message' => 'Invalid token'], 401);
+        }
 
-        return new JsonResponse(['message' => 'Comment saved successfully', 'comment' => $comment], 200);
+        // Récupérer les données de la requête
+        $data = json_decode($request->getContent(), true);
+        error_log('Received data: ' . print_r($data, true)); // Log the incoming data
+
+        $userId = $data['user_id'] ?? null;
+        $alignmentId = $data['alignment_id'] ?? null;
+        $comment = $data['comment'] ?? null;
+
+        if (!$userId || !$alignmentId) {
+            error_log('Missing required parameters: user_id or alignment_id');
+            return new JsonResponse(['message' => 'Missing required parameters'], 400);
+        }
+
+        try {
+            // Vérifier si une évaluation existe déjà pour cet utilisateur et cet alignement
+            $existingEvaluation = $em->getRepository(Evaluation::class)->findOneBy([
+                'user_id' => $userId,
+                'alignment_id' => $alignmentId
+            ]);
+    
+            if ($existingEvaluation) {
+                // Vérifier si l'évaluation a déjà été faite avant de permettre d'ajouter un commentaire
+                if (empty($existingEvaluation->getEvaluate())) {
+                    // Si le champ 'evaluate' est vide, cela signifie que l'évaluation n'a pas encore été faite
+                    return new JsonResponse(['message' => 'Evaluation must be done before adding a comment'], 400);
+                }
+    
+                // Mettre à jour l'évaluation existante avec le commentaire
+                $existingEvaluation->setComment($comment);
+                $em->persist($existingEvaluation);
+                $em->flush();
+    
+                return new JsonResponse(['message' => 'Comment added to existing evaluation'], 200);
+            } else {
+                // Si l'évaluation n'existe pas, renvoyer une erreur car il faut une évaluation avant d'ajouter un commentaire
+                return new JsonResponse(['message' => 'Evaluation not found. Please evaluate before adding a comment'], 400);
+            }
+        } catch (\Exception $e) {
+            error_log('Error processing evaluation: ' . $e->getMessage());
+            return new JsonResponse(['message' => 'Internal Server Error'], 500);
+        }
     }
 }

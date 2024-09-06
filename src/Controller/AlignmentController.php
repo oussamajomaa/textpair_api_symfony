@@ -47,7 +47,7 @@ class AlignmentController extends AbstractController
         $userId = $decodedToken->sub;
 
 
-        $pageSize = (int) $data['pageSize'];  // nombre de résultats par page
+        // $pageSize = (int) $data['pageSize'];  // nombre de résultats par page
         // Récupération du dernier ID de la page précédente (curseur)
         $lastId = (int) $data['lastId'];
 
@@ -75,7 +75,7 @@ class AlignmentController extends AbstractController
                 WHERE user_id != ?
             )
             ORDER BY alignment.id ASC
-            LIMIT ?";
+            LIMIT 50";
 
             // Requête SQL pour récupérer le nombre total d'enregistrements
             $countSql = "SELECT COUNT(*) as total_count
@@ -132,7 +132,7 @@ class AlignmentController extends AbstractController
                 WHERE user_id != ?
             )
             ORDER BY alignment.id ASC
-            LIMIT ?";
+            LIMIT 50";
 
             // Requête SQL pour récupérer le nombre total d'enregistrements
             $countSql = "SELECT COUNT(*) as total_count
@@ -182,7 +182,7 @@ class AlignmentController extends AbstractController
             $totalCount = (int) $totalCountResult;
 
             // Exécution de la requête pour les résultats paginés
-            $values = array_merge([$lastId], $values, [$pageSize]);
+            $values = array_merge([$lastId], $values);
             $results = $connection->fetchAllAssociative(
                 $sql,
                 $values,

@@ -26,7 +26,7 @@ class AuthController extends AbstractController
 
         // Si l'utilisateur n'existe pas ou que le mot de passe est incorrect
         if (!$user || !$passwordHasher->isPasswordValid($user, $password)) {
-            return new JsonResponse(['error' => 'Invalid credentials'], 401);
+            return new JsonResponse(['error' => 'identifiant ou mot de passe incorrect'], 401);
         }
 
         // Génération d'un JWT sécurisé
