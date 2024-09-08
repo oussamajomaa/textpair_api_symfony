@@ -12,7 +12,6 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Firebase\JWT\JWT;
 
-
 class AuthController extends AbstractController
 {
     #[Route('/api/login', name: 'api_login', methods: ['POST'])]
@@ -32,10 +31,11 @@ class AuthController extends AbstractController
         // Génération d'un JWT sécurisé
         $payload = [
             'sub' => $user->getId(),
+            'username' => $user->getUsername(),
             'email' => $user->getEmail(),
             'role' => $user->getRole(),
             'iat' => time(), // issued at
-            'exp' => time() + (24 * 60 * 60) // expiration (2 heures)
+            // 'exp' => time() + (2 * 60 * 60) // expiration (2 heures)
         ];
 
         $jwt = JWT::encode($payload, $_ENV['JWT_SECRET'], 'HS256');
@@ -43,6 +43,7 @@ class AuthController extends AbstractController
         $response = new JsonResponse([
             'token' => $jwt,
             'id' => $user->getId(),
+            'username' => $user->getUsername(),
             'email' => $user->getEmail(),
             'role' => $user->getRole(),
         ]);
@@ -52,7 +53,7 @@ class AuthController extends AbstractController
             new \Symfony\Component\HttpFoundation\Cookie(
                 'token',    // nom du cookie
                 $jwt,       // valeur du cookie
-                time() + (24 * 60 * 60),  // expiration (2 heures)
+                0,          // expiration (2 heures)
                 '/',        // chemin
                 null,       // domaine
                 false,      // secure (mettre à true en production si HTTPS)
@@ -72,4 +73,5 @@ class AuthController extends AbstractController
         $response->headers->clearCookie('token');
         return $response;
     }
+
 }
