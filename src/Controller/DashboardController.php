@@ -12,12 +12,37 @@ use Symfony\Component\HttpFoundation\Request;
 
 class DashboardController extends AbstractController
 {
-    #[Route('/api/dashboard', name: 'app_dashboard')]
+    #[Route('/api/dashboard/{order?}', name: 'app_dashboard')]
     public function index(
         Connection $connection,
         EvaluationRepository $evaluationRepo,
         AlignmentRepository $alignmentRepo,
+        $order,
     ): JsonResponse {
+        $allowedOrders = ['name', 'value'];
+        if (!in_array($order, $allowedOrders)) {
+            $order = 'value';  // Default to source_year if invalid order is provided
+        }
+        $sqlGroupBySourceYear = "SELECT count(*) as value, source_year as name FROM alignment WEHRE GROUP BY source_year ORDER BY CAST($order AS UNSIGNED)";
+        $sourceYear = $connection->fetchAllAssociative($sqlGroupBySourceYear);
+        
+        $sqlGroupByTargetYear = "SELECT count(*) as value, target_year as name FROM alignment WEHRE GROUP BY target_year ORDER BY CAST($order AS UNSIGNED)";
+        $targetYear = $connection->fetchAllAssociative($sqlGroupByTargetYear);
+
+        $sqlGroupBySourceAuthor = "SELECT count(*) as value, source_author as name FROM alignment WEHRE GROUP BY source_author ORDER BY CAST($order AS UNSIGNED)";
+        $sourceAuthor = $connection->fetchAllAssociative($sqlGroupBySourceAuthor);
+
+        $sqlGroupByTargetAuthor = "SELECT count(*) as value, target_author as name FROM alignment WEHRE GROUP BY target_author ORDER BY CAST($order AS UNSIGNED)";
+        $targetAuthor = $connection->fetchAllAssociative($sqlGroupByTargetAuthor);
+        
+        $sqlEvaluatedByUser = "SELECT u.username As name, COUNT(*) AS value
+                                FROM evaluation e
+                                JOIN user u ON e.user_id = u.id
+                                WHERE e.evaluate IS NOT NULL
+                                GROUP BY e.user_id";
+
+        $evaluatedByUser = $connection->fetchAllAssociative($sqlEvaluatedByUser);
+
         // Get the counts directly from the repository using more efficient count queries
         $evaluated = $evaluationRepo->count([]); // Count all evaluations
         $validatedCount = $evaluationRepo->count(['validate' => 1]); // Count validated evaluations
@@ -25,13 +50,6 @@ class DashboardController extends AbstractController
         $incorrectCount = $evaluationRepo->count(['evaluate' => 'Incorrect']); // Count incorrect evaluations
         $passurCount = $evaluationRepo->count(['evaluate' => 'Pas sûr']); // Count "Pas sûr" evaluations
         $alignment = $alignmentRepo->count([]); // Count all alignments
-
-        $sqlEvaluatedByUser = "SELECT u.username As name, COUNT(*) AS value
-                                FROM evaluation e
-                                JOIN user u ON e.user_id = u.id
-                                WHERE e.evaluate IS NOT NULL
-                                GROUP BY e.user_id";
-        $evaluatedByUser = $connection->fetchAllAssociative($sqlEvaluatedByUser);
 
         $sqlAnnotateur = "SELECT * from user WHERE role = 'Annotateur'";
         $sqlValidateur = "SELECT * from user WHERE role = 'Validateur'";
@@ -44,20 +62,25 @@ class DashboardController extends AbstractController
 
         // Return the counts as JSON response
         return new JsonResponse([
-            'evaluated' => $evaluated,
-            'validated' => $validatedCount,
-            'correct' => $correctCount,
-            'incorrect' => $incorrectCount,
-            'notSure' => $passurCount,
-            'alignment' => $alignment,
-            'evaluatedByUser' => $evaluatedByUser,
-            'annotateur' => $annotateur,
-            'validateur' => $validateur,
+            'evaluated'         => $evaluated,
+            'validated'         => $validatedCount,
+            'correct'           => $correctCount,
+            'incorrect'         => $incorrectCount,
+            'notSure'           => $passurCount,
+            'alignment'         => $alignment,
+            'evaluatedByUser'   => $evaluatedByUser,
+            'annotateur'        => $annotateur,
+            'validateur'        => $validateur,
+            'sourceYear'        => $sourceYear,
+            'targetYear'        => $targetYear,
+            'sourceAuthor'      => $sourceAuthor,
+            'targetAuthor'      => $targetAuthor
+            
 
         ]);
     }
 
-    #[Route('api/dashboard/{userId}', name: 'app_dashboard_annotateur')]
+    #[Route('api/dashboard/annotateur/{userId}', name: 'app_dashboard_annotateur')]
     public function annotateur(int $userId, Connection $connection): JsonResponse
     {
         $sqlByUser = "
@@ -81,3 +104,4 @@ class DashboardController extends AbstractController
         
     }
 }
+// tail -f var/log/dev.log

@@ -40,4 +40,22 @@ class AlignmentRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+
+    public function countBySourceAuthor()
+    {
+        return $this->createQueryBuilder('a')
+            ->select('a.source_author, COUNT(a.id) as count')  // Sélectionnez la source_author et le count
+            ->groupBy('a.source_author')                       // Groupement par le champ source_author
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function countByTargetAuthor()
+    {
+        return $this->createQueryBuilder('a')
+            ->select('a.target_author, COUNT(a.id) as count')  // Sélectionnez la target_author et le count
+            ->groupBy('a.target_author')                       // Groupement par le champ source_author
+            ->getQuery()
+            ->getResult();
+    }
 }
