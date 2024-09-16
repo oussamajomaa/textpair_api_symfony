@@ -8,6 +8,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Doctrine\DBAL\Connection;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 use Symfony\Component\HttpFoundation\Request;
 
 class DashboardController extends AbstractController
@@ -17,15 +19,33 @@ class DashboardController extends AbstractController
         Connection $connection,
         EvaluationRepository $evaluationRepo,
         AlignmentRepository $alignmentRepo,
+        Request $request,
         $order,
     ): JsonResponse {
+
+        // Accéder au cookie
+        $token = $request->cookies->get('token');
+
+        if (!$token) {
+            return new JsonResponse(['error' => 'Token not found'], 401);
+        }
+
+        // Décoder le token pour obtenir l'utilisateur connecté
+        try {
+            $secretKey = $_ENV['JWT_SECRET'];
+            $decodedToken = JWT::decode($token, new Key($secretKey, 'HS256'));
+            $userId = $decodedToken->sub; // Assurez-vous que le token contient un champ 'sub' avec l'ID utilisateur
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Invalid token'], 401);
+        }
+
         $allowedOrders = ['name', 'value'];
         if (!in_array($order, $allowedOrders)) {
             $order = 'value';  // Default to source_year if invalid order is provided
         }
         $sqlGroupBySourceYear = "SELECT count(*) as value, source_year as name FROM alignment WEHRE GROUP BY source_year ORDER BY CAST($order AS UNSIGNED)";
         $sourceYear = $connection->fetchAllAssociative($sqlGroupBySourceYear);
-        
+
         $sqlGroupByTargetYear = "SELECT count(*) as value, target_year as name FROM alignment WEHRE GROUP BY target_year ORDER BY CAST($order AS UNSIGNED)";
         $targetYear = $connection->fetchAllAssociative($sqlGroupByTargetYear);
 
@@ -34,7 +54,7 @@ class DashboardController extends AbstractController
 
         $sqlGroupByTargetAuthor = "SELECT count(*) as value, target_author as name FROM alignment WEHRE GROUP BY target_author ORDER BY CAST($order AS UNSIGNED)";
         $targetAuthor = $connection->fetchAllAssociative($sqlGroupByTargetAuthor);
-        
+
         $sqlEvaluatedByUser = "SELECT u.username As name, COUNT(*) AS value
                                 FROM evaluation e
                                 JOIN user u ON e.user_id = u.id
@@ -75,14 +95,30 @@ class DashboardController extends AbstractController
             'targetYear'        => $targetYear,
             'sourceAuthor'      => $sourceAuthor,
             'targetAuthor'      => $targetAuthor
-            
+
 
         ]);
     }
 
     #[Route('api/dashboard/annotateur/{userId}', name: 'app_dashboard_annotateur')]
-    public function annotateur(int $userId, Connection $connection): JsonResponse
+    public function annotateur(int $userId, Connection $connection, Request $request): JsonResponse
     {
+        // Accéder au cookie
+        $token = $request->cookies->get('token');
+
+        if (!$token) {
+            return new JsonResponse(['error' => 'Token not found'], 401);
+        }
+
+        // Vérifier si le token est valide sans nécessairement extraire des données utilisateur
+        try {
+            $secretKey = $_ENV['JWT_SECRET'];
+            $decodedToken = JWT::decode($token, new Key($secretKey, 'HS256'));
+            // Si le token est valide, vous n'avez rien à faire de plus ici
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Invalid token'], 401);
+        }
+
         $sqlByUser = "
             SELECT 
             u.username,
@@ -93,7 +129,7 @@ class DashboardController extends AbstractController
             JOIN user u ON e.user_id = u.id
             WHERE e.user_id = ?
             GROUP BY u.username";
-        
+
         // Récupération des détails de l'annotateur
         $annotateurDetail = $connection->fetchAllAssociative($sqlByUser, [$userId]);
         if (!empty($annotateurDetail)) {
@@ -101,7 +137,6 @@ class DashboardController extends AbstractController
         } else {
             return new JsonResponse(['annotateurDetail' => []]);
         }
-        
     }
 }
 // tail -f var/log/dev.log

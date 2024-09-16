@@ -8,6 +8,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Doctrine\DBAL\Connection;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -16,6 +18,22 @@ class RapportController extends AbstractController
     #[Route('/api/admin/rapport/evaluated', name: 'app_rapport_evaluated')]
     public function evaluated(Connection $connection, Request $request): JsonResponse
     {
+        // Accéder au cookie
+        $token = $request->cookies->get('token');
+
+        if (!$token) {
+            return new JsonResponse(['error' => 'Token not found'], 401);
+        }
+
+        // Décoder le token pour obtenir l'utilisateur connecté
+        try {
+            $secretKey = $_ENV['JWT_SECRET'];
+            $decodedToken = JWT::decode($token, new Key($secretKey, 'HS256'));
+            $userId = $decodedToken->sub; // Assurez-vous que le token contient un champ 'sub' avec l'ID utilisateur
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Invalid token'], 401);
+        }
+
         $data = json_decode($request->getContent());
         // Récupérer les paramètres limit et lastId depuis le corps de la requête
         // Met à jour pour utiliser lastId au lieu de offset
@@ -44,6 +62,22 @@ class RapportController extends AbstractController
     #[Route('/api/admin/rapport/validated', name: 'app_rapport_validated')]
     public function validated(Connection $connection, Request $request): JsonResponse
     {
+        // Accéder au cookie
+        $token = $request->cookies->get('token');
+
+        if (!$token) {
+            return new JsonResponse(['error' => 'Token not found'], 401);
+        }
+
+        // Décoder le token pour obtenir l'utilisateur connecté
+        try {
+            $secretKey = $_ENV['JWT_SECRET'];
+            $decodedToken = JWT::decode($token, new Key($secretKey, 'HS256'));
+            $userId = $decodedToken->sub; // Assurez-vous que le token contient un champ 'sub' avec l'ID utilisateur
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Invalid token'], 401);
+        }
+
         $data = json_decode($request->getContent());
         // Récupérer les paramètres limit et lastId depuis le corps de la requête
         // Met à jour pour utiliser lastId au lieu de offset
@@ -73,6 +107,22 @@ class RapportController extends AbstractController
     public function alignment(Connection $connection, Request $request): JsonResponse
     {
 
+        // Accéder au cookie
+        $token = $request->cookies->get('token');
+
+        if (!$token) {
+            return new JsonResponse(['error' => 'Token not found'], 401);
+        }
+
+        // Décoder le token pour obtenir l'utilisateur connecté
+        try {
+            $secretKey = $_ENV['JWT_SECRET'];
+            $decodedToken = JWT::decode($token, new Key($secretKey, 'HS256'));
+            $userId = $decodedToken->sub; // Assurez-vous que le token contient un champ 'sub' avec l'ID utilisateur
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Invalid token'], 401);
+        }
+
         $data = json_decode($request->getContent());
 
         // Récupérer les paramètres limit et lastId depuis le corps de la requête
@@ -101,8 +151,24 @@ class RapportController extends AbstractController
     }
 
     #[Route('/api/admin/rapport/count', name: 'app_rapport_count')]
-    public function count(EvaluationRepository $repo, AlignmentRepository $repoAlign): JsonResponse
+    public function count(EvaluationRepository $repo, AlignmentRepository $repoAlign, Request $request): JsonResponse
     {
+        // Accéder au cookie
+        $token = $request->cookies->get('token');
+
+        if (!$token) {
+            return new JsonResponse(['error' => 'Token not found'], 401);
+        }
+
+        // Décoder le token pour obtenir l'utilisateur connecté
+        try {
+            $secretKey = $_ENV['JWT_SECRET'];
+            $decodedToken = JWT::decode($token, new Key($secretKey, 'HS256'));
+            $userId = $decodedToken->sub; // Assurez-vous que le token contient un champ 'sub' avec l'ID utilisateur
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Invalid token'], 401);
+        }
+
         $countEvaluated = $repo->count();
         $countValidated = $repo->count(['validate' => 1]);
         $countAlignment = $repoAlign->count();
@@ -120,8 +186,23 @@ class RapportController extends AbstractController
     }
 
     #[Route('/api/admin/rapport/author_source', name: 'app_rapport_author_source')]
-    public function author_source(Connection $connection): JsonResponse
+    public function author_source(Connection $connection, Request $request): JsonResponse
     {
+        // Accéder au cookie
+        $token = $request->cookies->get('token');
+
+        if (!$token) {
+            return new JsonResponse(['error' => 'Token not found'], 401);
+        }
+
+        // Décoder le token pour obtenir l'utilisateur connecté
+        try {
+            $secretKey = $_ENV['JWT_SECRET'];
+            $decodedToken = JWT::decode($token, new Key($secretKey, 'HS256'));
+            $userId = $decodedToken->sub; // Assurez-vous que le token contient un champ 'sub' avec l'ID utilisateur
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Invalid token'], 401);
+        }
 
         // Requête SQL pour récupérer les auteurs distincts
         $sqlAuthor = "SELECT DISTINCT source_author as Auteur
@@ -135,8 +216,24 @@ class RapportController extends AbstractController
     }
 
     #[Route('/api/admin/rapport/author_target', name: 'app_rapport_author_target')]
-    public function author_target(Connection $connection): JsonResponse
+    public function author_target(Connection $connection, Request $request): JsonResponse
     {
+        // Accéder au cookie
+        $token = $request->cookies->get('token');
+
+        if (!$token) {
+            return new JsonResponse(['error' => 'Token not found'], 401);
+        }
+
+        // Décoder le token pour obtenir l'utilisateur connecté
+        try {
+            $secretKey = $_ENV['JWT_SECRET'];
+            $decodedToken = JWT::decode($token, new Key($secretKey, 'HS256'));
+            $userId = $decodedToken->sub; // Assurez-vous que le token contient un champ 'sub' avec l'ID utilisateur
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Invalid token'], 401);
+        }
+        
         // Requête SQL pour récupérer les auteurs distincts
         $sqlAuthor = "SELECT DISTINCT target_author as Auteur
                   FROM alignment

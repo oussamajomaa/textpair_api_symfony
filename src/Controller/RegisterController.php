@@ -46,7 +46,7 @@ class RegisterController extends AbstractController
 
         // Si le token est valide, continuer avec l'enregistrement
         $data = json_decode($request->getContent(), true);
-
+        $username = $data['username'] ?? '';
         $email = $data['email'] ?? '';
         $password = $data['password'] ?? '';
         $role = $data['role'] ?? 'Annotateur';  // Rôle par défaut
@@ -63,6 +63,7 @@ class RegisterController extends AbstractController
 
         // Création du nouvel utilisateur
         $user = new User();
+        $user->setUsername($username);
         $user->setEmail($email);
         $user->setPassword($passwordHasher->hashPassword($user, $password));
         $user->setRole($role);
