@@ -38,7 +38,7 @@ public function index(Request $request, Connection $connection): JsonResponse
             JOIN alignment ON alignment.id = evaluation.alignment_id
             WHERE evaluation.id > ? AND (evaluation.validate = 0 OR evaluation.validateur_id = ? OR evaluation.validate IS NULL ) 
             ORDER BY evaluation.id 
-            LIMIT 10";
+            LIMIT 50";
 
     $sqlCount = "SELECT count(*) 
                  FROM evaluation

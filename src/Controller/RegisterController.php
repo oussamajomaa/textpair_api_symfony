@@ -46,7 +46,7 @@ class RegisterController extends AbstractController
 
         // Si le token est valide, continuer avec l'enregistrement
         $data = json_decode($request->getContent(), true);
-        $username = $data['username'] ?? '';
+        // $username = $data['username'] ?? '';
         $email = $data['email'] ?? '';
         $password = $data['password'] ?? '';
         $role = $data['role'] ?? 'Annotateur';  // Rôle par défaut
@@ -58,12 +58,12 @@ class RegisterController extends AbstractController
 
         // Vérification si l'utilisateur existe déjà
         if ($em->getRepository(User::class)->findOneBy(['email' => $email])) {
-            return new JsonResponse(['message' => 'User already exists'], 409);
+            return new JsonResponse(['message' => 'Adresse mail existe déjà'], 409);
         }
 
         // Création du nouvel utilisateur
         $user = new User();
-        $user->setUsername($username);
+        // $user->setUsername($username);
         $user->setEmail($email);
         $user->setPassword($passwordHasher->hashPassword($user, $password));
         $user->setRole($role);

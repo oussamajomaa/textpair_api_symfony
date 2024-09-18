@@ -55,7 +55,7 @@ class DashboardController extends AbstractController
         $sqlGroupByTargetAuthor = "SELECT count(*) as value, target_author as name FROM alignment WEHRE GROUP BY target_author ORDER BY CAST($order AS UNSIGNED)";
         $targetAuthor = $connection->fetchAllAssociative($sqlGroupByTargetAuthor);
 
-        $sqlEvaluatedByUser = "SELECT u.username As name, COUNT(*) AS value
+        $sqlEvaluatedByUser = "SELECT u.email As name, COUNT(*) AS value
                                 FROM evaluation e
                                 JOIN user u ON e.user_id = u.id
                                 WHERE e.evaluate IS NOT NULL
@@ -63,12 +63,20 @@ class DashboardController extends AbstractController
 
         $evaluatedByUser = $connection->fetchAllAssociative($sqlEvaluatedByUser);
 
+        $sqlEvaluatedByvalidateur = "SELECT u.email As name, COUNT(*) AS value
+                                FROM evaluation e
+                                JOIN user u ON e.validateur_id = u.id
+                                WHERE e.evaluate IS NOT NULL
+                                GROUP BY e.validateur_id";
+        $evaluatedByValidateur = $connection->fetchAllAssociative($sqlEvaluatedByvalidateur);
+
+
         // Get the counts directly from the repository using more efficient count queries
         $evaluated = $evaluationRepo->count([]); // Count all evaluations
         $validatedCount = $evaluationRepo->count(['validate' => 1]); // Count validated evaluations
         $correctCount = $evaluationRepo->count(['evaluate' => 'Correct']); // Count correct evaluations
         $incorrectCount = $evaluationRepo->count(['evaluate' => 'Incorrect']); // Count incorrect evaluations
-        $passurCount = $evaluationRepo->count(['evaluate' => 'Pas sûr']); // Count "Pas sûr" evaluations
+        $passurCount = $evaluationRepo->count(['evaluate' => 'Incertain']); // Count "Incertain" evaluations
         $alignment = $alignmentRepo->count([]); // Count all alignments
 
         $sqlAnnotateur = "SELECT * from user WHERE role = 'Annotateur'";
@@ -89,6 +97,7 @@ class DashboardController extends AbstractController
             'notSure'           => $passurCount,
             'alignment'         => $alignment,
             'evaluatedByUser'   => $evaluatedByUser,
+            'evaluatedByValidateur' => $evaluatedByValidateur,
             'annotateur'        => $annotateur,
             'validateur'        => $validateur,
             'sourceYear'        => $sourceYear,
@@ -121,14 +130,14 @@ class DashboardController extends AbstractController
 
         $sqlByUser = "
             SELECT 
-            u.username,
+            u.email,
                 SUM(CASE WHEN e.evaluate = 'Correct' THEN 1 ELSE 0 END) AS correct_count,
                 SUM(CASE WHEN e.evaluate = 'Incorrect' THEN 1 ELSE 0 END) AS incorrect_count,
-                SUM(CASE WHEN e.evaluate = 'Pas sûr' THEN 1 ELSE 0 END) AS pas_sur_count
+                SUM(CASE WHEN e.evaluate = 'Incertain' THEN 1 ELSE 0 END) AS pas_sur_count
             FROM evaluation e
             JOIN user u ON e.user_id = u.id
             WHERE e.user_id = ?
-            GROUP BY u.username";
+            GROUP BY u.email";
 
         // Récupération des détails de l'annotateur
         $annotateurDetail = $connection->fetchAllAssociative($sqlByUser, [$userId]);

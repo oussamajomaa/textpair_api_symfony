@@ -117,7 +117,7 @@ class EvaluationController extends AbstractController
             $sql = "SELECT alignment.id as ID, evaluation.id as evaluation_id, alignment.*, evaluation.* 
                 FROM alignment 
                 JOIN evaluation ON evaluation.alignment_id = alignment.id
-                WHERE evaluation.id > ? AND evaluation.user_id = ? order by evaluation.id LIMIT 10 ";
+                WHERE evaluation.id > ? AND evaluation.user_id = ? order by evaluation.id LIMIT 50 ";
 
             $sqlCount = "SELECT COUNT(*) as total  
                      FROM alignment 
@@ -137,11 +137,15 @@ class EvaluationController extends AbstractController
                 // Après avoir récupéré les résultats dans la variable $results
                 $evaluationIds = array_column($results, 'evaluation_id'); // Récupère tous les evaluation_id
                 $maxEvaluationId = !empty($evaluationIds) ? max($evaluationIds) : null; // Récupère le maximum
+
+                $lastResult = end($results); // Récupère le dernier élément du tableau
+                $lastEvaluationId = $lastResult['evaluation_id'] ?? null;
+
                 return new JsonResponse(
                     [
                         'results' => $results,
                         'count' => $count,
-                        'lastId' => $maxEvaluationId
+                        'lastId' => $lastEvaluationId
                     ]
                 );
             } catch (\Exception $e) {
