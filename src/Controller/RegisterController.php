@@ -25,7 +25,7 @@ class RegisterController extends AbstractController
     ): JsonResponse {
         // Récupérer le token depuis les cookies
         $token = $request->cookies->get('token');
-        
+
         // Log the token to see if it's being received (optional)
         error_log('Received token: ' . ($token ?: 'No token received'));
 

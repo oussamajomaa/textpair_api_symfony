@@ -57,7 +57,7 @@ class AuthController extends AbstractController
                 '/',        // chemin
                 null,       // domaine
                 false,      // secure (mettre à true en production si HTTPS)
-                true,       // httpOnly
+                false,       // httpOnly
                 false,      // raw
                 'Strict'    // same-site
             )
