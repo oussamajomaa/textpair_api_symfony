@@ -56,8 +56,10 @@ class AdminAlignmentController extends AbstractController
 
         // Construire la requête
         if ($start !== $end) {
-            $sql = "SELECT alignment.id as ID, alignment.*
+            $sql = "SELECT alignment.id as ID, alignment.*, evaluation.* 
             FROM alignment 
+            LEFT JOIN evaluation ON evaluation.alignment_id = alignment.id 
+            
             WHERE alignment.id > ? AND
             source_content LIKE ? AND
             source_author LIKE ? AND 
@@ -98,8 +100,10 @@ class AdminAlignmentController extends AbstractController
                 $end
             ];
         } else {
-            $sql = "SELECT alignment.id as ID, alignment.*
+            $sql = "SELECT alignment.id as ID, alignment.*, evaluation.* 
             FROM alignment 
+            LEFT JOIN evaluation ON evaluation.alignment_id = alignment.id 
+            
             WHERE alignment.id > ? AND
             source_content LIKE ? AND
             source_author LIKE ? AND 

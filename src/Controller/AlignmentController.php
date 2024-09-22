@@ -55,7 +55,7 @@ class AlignmentController extends AbstractController
         $start = isset($data['start']) ? (int) $data['start'] : 0;
         $end = isset($data['end']) ? (int) $data['end'] : PHP_INT_MAX;
 
-        if ($role !== 'Administrateur') {
+        if ($role === 'Administrateur') {
 
         }
         if ($start !== $end) {
