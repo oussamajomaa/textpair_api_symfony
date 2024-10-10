@@ -60,6 +60,18 @@ class Alignment
     #[ORM\Column]
     private ?int $alignment_id = null;
 
+    #[ORM\Column]
+    private ?int $source_length = null;
+
+    #[ORM\Column]
+    private ?int $target_length = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $source_genre = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $target_genre = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -241,6 +253,54 @@ class Alignment
     public function setAlignmentId(int $alignment_id): static
     {
         $this->alignment_id = $alignment_id;
+
+        return $this;
+    }
+
+    public function getSourceLength(): ?int
+    {
+        return $this->source_length;
+    }
+
+    public function setSourceLength(int $source_length): static
+    {
+        $this->source_length = $source_length;
+
+        return $this;
+    }
+
+    public function getTargetLength(): ?int
+    {
+        return $this->target_length;
+    }
+
+    public function setTargetLength(int $target_length): static
+    {
+        $this->target_length = $target_length;
+
+        return $this;
+    }
+
+    public function getSourceGenre(): ?string
+    {
+        return $this->source_genre;
+    }
+
+    public function setSourceGenre(?string $source_genre): static
+    {
+        $this->source_genre = $source_genre;
+
+        return $this;
+    }
+
+    public function getTargetGenre(): ?string
+    {
+        return $this->target_genre;
+    }
+
+    public function setTargetGenre(?string $target_genre): static
+    {
+        $this->target_genre = $target_genre;
 
         return $this;
     }
