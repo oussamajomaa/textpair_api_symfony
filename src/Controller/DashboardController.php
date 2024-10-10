@@ -74,9 +74,9 @@ class DashboardController extends AbstractController
         // Get the counts directly from the repository using more efficient count queries
         $evaluated = $evaluationRepo->count([]); // Count all evaluations
         $validatedCount = $evaluationRepo->count(['validate' => 1]); // Count validated evaluations
-        $correctCount = $evaluationRepo->count(['evaluate' => 'Correct']); // Count correct evaluations
-        $incorrectCount = $evaluationRepo->count(['evaluate' => 'Incorrect']); // Count incorrect evaluations
-        $passurCount = $evaluationRepo->count(['evaluate' => 'Incertain']); // Count "Incertain" evaluations
+        $ouiCount = $evaluationRepo->count(['evaluate' => 'Oui']); // Count correct evaluations
+        $nonCount = $evaluationRepo->count(['evaluate' => 'Non']); // Count incorrect evaluations
+        $douteuxCount = $evaluationRepo->count(['evaluate' => 'Douteux']); // Count "Douteux" evaluations
         $alignment = $alignmentRepo->count([]); // Count all alignments
 
         $sqlAnnotateur = "SELECT * from user WHERE role = 'Annotateur'";
@@ -92,9 +92,9 @@ class DashboardController extends AbstractController
         return new JsonResponse([
             'evaluated'         => $evaluated,
             'validated'         => $validatedCount,
-            'correct'           => $correctCount,
-            'incorrect'         => $incorrectCount,
-            'notSure'           => $passurCount,
+            'oui'           => $ouiCount,
+            'non'         => $nonCount,
+            'douteux'           => $douteuxCount,
             'alignment'         => $alignment,
             'evaluatedByUser'   => $evaluatedByUser,
             'evaluatedByValidateur' => $evaluatedByValidateur,
@@ -131,9 +131,9 @@ class DashboardController extends AbstractController
         $sqlByUser = "
             SELECT 
             u.email,
-                SUM(CASE WHEN e.evaluate = 'Correct' THEN 1 ELSE 0 END) AS correct_count,
-                SUM(CASE WHEN e.evaluate = 'Incorrect' THEN 1 ELSE 0 END) AS incorrect_count,
-                SUM(CASE WHEN e.evaluate = 'Incertain' THEN 1 ELSE 0 END) AS pas_sur_count
+                SUM(CASE WHEN e.evaluate = 'Oui' THEN 1 ELSE 0 END) AS correct_count,
+                SUM(CASE WHEN e.evaluate = 'Non' THEN 1 ELSE 0 END) AS incorrect_count,
+                SUM(CASE WHEN e.evaluate = 'Douteux' THEN 1 ELSE 0 END) AS pas_sur_count
             FROM evaluation e
             JOIN user u ON e.user_id = u.id
             WHERE e.user_id = ?
