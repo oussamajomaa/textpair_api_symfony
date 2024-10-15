@@ -67,6 +67,7 @@ class RegisterController extends AbstractController
         $user->setEmail($email);
         $user->setPassword($passwordHasher->hashPassword($user, $password));
         $user->setRole($role);
+        $user->setResetToken('');
 
         // Validation de l'entité User
         $errors = $validator->validate($user);
