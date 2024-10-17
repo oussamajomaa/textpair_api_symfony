@@ -9,6 +9,7 @@ use Firebase\JWT\Key;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\Annotation\Route;
 
 class AlignmentController extends AbstractController
@@ -48,6 +49,8 @@ class AlignmentController extends AbstractController
         $targetYear = '%' . $data['target_year'] . '%';
         $userId = $decodedToken->sub;
 
+        // $sourceLength = '%' . $data['source_length'] . '%';
+        // $targetLength = '%' . $data['target_length'] . '%';
 
         // $pageSize = (int) $data['pageSize'];  // nombre de résultats par page
         // Récupération du dernier ID de la page précédente (curseur)
@@ -56,99 +59,25 @@ class AlignmentController extends AbstractController
         $start = isset($data['start']) ? (int) $data['start'] : 0;
         $end = isset($data['end']) ? (int) $data['end'] : PHP_INT_MAX;
 
-        if ($role === 'Administrateur') {
-        }
-        if ($start !== $end) {
-            $sql = "SELECT alignment.id as ID, alignment.*, evaluation.* 
-            FROM alignment 
-            LEFT JOIN evaluation ON evaluation.alignment_id = alignment.id 
-            WHERE alignment.id > ? AND
-            source_content LIKE ? AND
-            source_author LIKE ? AND 
-            source_title LIKE ? AND
-            source_year LIKE ? AND
-            target_content LIKE ? AND
-            target_author LIKE ? AND 
-            target_title LIKE ? AND
-            target_year LIKE ? AND 
-            alignment.id BETWEEN ? AND ? AND
-            (evaluation.user_id = ? OR evaluation.user_id IS NULL)
-            AND alignment.id NOT IN (
-                SELECT alignment_id 
-                FROM evaluation 
-                WHERE user_id != ?
-            )
-            ORDER BY alignment.id ASC
-            LIMIT 50";
 
-            $sqlAll = "SELECT alignment.id as ID, 
-            SUBSTRING(alignment.source_content, 1, 50) AS source_content, -- Limiter à 50 caractères
-            SUBSTRING(alignment.target_content, 1, 50) AS target_content, -- Limiter à 50 caractères
-            SUBSTRING(alignment.source_author, 1, 30) AS source_author,
-            SUBSTRING(alignment.source_title, 1, 30) AS source_title,
+        $sql = "SELECT alignment.id as ID, 
+            alignment.source_before,
+            SUBSTRING(alignment.source_content, 1, 1600) AS source_content, -- Limiter à 1500 caractères
+            alignment.source_after,
+            alignment.source_author,
+            alignment.source_title,
             alignment.source_year,
-            SUBSTRING(alignment.target_author, 1, 30) AS target_author,
-            SUBSTRING(alignment.target_title, 1, 30) As target_title,
+            alignment.source_length,
+            alignment.source_genre,
+            alignment.target_author,
+            alignment.target_before,
+            SUBSTRING(alignment.target_content, 1, 1600) AS target_content, -- Limiter à 1500 caractères
+            alignment.target_after,
+            alignment.target_title, 
             alignment.target_year,
+            alignment.target_length,
+            alignment.target_genre,
             evaluation.* 
-            FROM alignment 
-            LEFT JOIN evaluation ON evaluation.alignment_id = alignment.id 
-            WHERE alignment.id > ? AND
-            source_content LIKE ? AND
-            source_author LIKE ? AND 
-            source_title LIKE ? AND
-            source_year LIKE ? AND
-            target_content LIKE ? AND
-            target_author LIKE ? AND 
-            target_title LIKE ? AND
-            target_year LIKE ? AND 
-            alignment.id BETWEEN ? AND ? AND
-            (evaluation.user_id = ? OR evaluation.user_id IS NULL)
-            AND alignment.id NOT IN (
-                SELECT alignment_id 
-                FROM evaluation 
-                WHERE user_id != ?
-            )
-            ORDER BY alignment.id ASC";
-
-            // Requête SQL pour récupérer le nombre total d'enregistrements
-            $countSql = "SELECT COUNT(*) as total_count
-            FROM alignment 
-            LEFT JOIN evaluation ON evaluation.alignment_id = alignment.id 
-            WHERE 
-            source_content LIKE ? AND
-            source_author LIKE ? AND 
-            source_title LIKE ? AND
-            source_year LIKE ? AND
-            target_content LIKE ? AND
-            target_author LIKE ? AND 
-            target_title LIKE ? AND
-            target_year LIKE ? AND 
-            alignment.id BETWEEN ? AND ? AND
-            (evaluation.user_id = ? OR evaluation.user_id IS NULL)
-            AND alignment.id NOT IN (
-                SELECT alignment_id 
-                FROM evaluation 
-                WHERE user_id != ?
-            )";
-
-            $values = [
-                $sourceContent,
-                $sourceAuthor,
-                $sourceTitle,
-                $sourceYear,
-                $targetContent,
-                $targetAuthor,
-                $targetTitle,
-                $targetYear,
-                $start,
-                $end,
-                $userId,
-                $userId
-            ];
-            // $values = array_merge([$lastId], $values, [$start, $end, $pageSize]);
-        } else {
-            $sql = "SELECT alignment.id as ID, alignment.*, evaluation.* 
             FROM alignment 
             LEFT JOIN evaluation ON evaluation.alignment_id = alignment.id 
             WHERE alignment.id > ? AND
@@ -169,15 +98,17 @@ class AlignmentController extends AbstractController
             ORDER BY alignment.id ASC
             LIMIT 50";
 
-            $sqlAll = "SELECT alignment.id as ID,  
+        $sqlAll = "SELECT alignment.id as ID,  
             SUBSTRING(alignment.source_content, 1, 50) AS source_content, -- Limiter à 50 caractères
             SUBSTRING(alignment.target_content, 1, 50) AS target_content, -- Limiter à 50 caractères
             SUBSTRING(alignment.source_author, 1, 30) AS source_author,
             SUBSTRING(alignment.source_title, 1, 30) AS source_title,
             alignment.source_year,
+            alignment.source_length,
             SUBSTRING(alignment.target_author, 1, 30) AS target_author,
             SUBSTRING(alignment.target_title, 1, 30) As target_title,
             alignment.target_year,
+            alignment.target_length,
             evaluation.* 
             FROM alignment 
             LEFT JOIN evaluation ON evaluation.alignment_id = alignment.id 
@@ -198,8 +129,8 @@ class AlignmentController extends AbstractController
             )
             ORDER BY alignment.id ASC";
 
-            // Requête SQL pour récupérer le nombre total d'enregistrements
-            $countSql = "SELECT COUNT(*) as total_count
+        // Requête SQL pour récupérer le nombre total d'enregistrements
+        $countSql = "SELECT COUNT(*) as total_count
             FROM alignment 
             LEFT JOIN evaluation ON evaluation.alignment_id = alignment.id 
             WHERE 
@@ -217,20 +148,20 @@ class AlignmentController extends AbstractController
                 FROM evaluation 
                 WHERE user_id != ?
             )";
-            $values = [
-                $sourceContent,
-                $sourceAuthor,
-                $sourceTitle,
-                $sourceYear,
-                $targetContent,
-                $targetAuthor,
-                $targetTitle,
-                $targetYear,
-                $userId,
-                $userId
-            ];
-            // $values = array_merge([$lastId], $values, [$pageSize]);
-        }
+
+        $values = [
+            $sourceContent,
+            $sourceAuthor,
+            $sourceTitle,
+            $sourceYear,
+            $targetContent,
+            $targetAuthor,
+            $targetTitle,
+            $targetYear,
+            $userId,
+            $userId
+        ];
+
 
         error_log('last_id reçu dans la requête: ' . $lastId);
 
@@ -260,80 +191,137 @@ class AlignmentController extends AbstractController
                 error_log('Query returned no results');
             }
 
-            // Étape 2: Compter les occurrences pour chaque champ individuellement
-            $fieldCounts = [
-                'source_content' => [],
-                'source_author' => [],
-                'source_title' => [],
-                'source_year' => [],
-                'target_content' => [],
-                'target_author' => [],
-                'target_title' => [],
-                'target_year' => []
-            ];
 
-            // Parcourir chaque résultat et compter les occurrences de chaque champ
-            foreach ($resultsAll as $result) {
+            if ($lastId == 0) {
 
-               
-                // Compter les occurrences de 'source_content'
-                if (!isset($fieldCounts['source_content'][$result['source_content']])) {
-                    $fieldCounts['source_content'][$result['source_content']] = ['value' => $result['source_content'], 'count' => 0];
+                // Étape 2: Compter les occurrences pour chaque champ individuellement
+                $fieldCounts = [
+                    'source_content' => [],
+                    'source_author' => [],
+                    'source_title' => [],
+                    'source_year' => [],
+                    'source_length' => [],
+                    'target_content' => [],
+                    'target_author' => [],
+                    'target_title' => [],
+                    'target_year' => [],
+                    'target_length' => [],
+                ];
+    
+                // Parcourir chaque résultat et compter les occurrences de chaque champ
+                foreach ($resultsAll as $result) {
+    
+    
+                    // Compter les occurrences de 'source_content'
+                    if (!isset($fieldCounts['source_content'][$result['source_content']])) {
+                        $fieldCounts['source_content'][$result['source_content']] = ['value' => $result['source_content'], 'count' => 0];
+                    }
+                    $fieldCounts['source_content'][$result['source_content']]['count']++;
+    
+                    // Compter les occurrences de 'source_author'
+                    if (!isset($fieldCounts['source_author'][$result['source_author']])) {
+                        $fieldCounts['source_author'][$result['source_author']] = ['value' => $result['source_author'], 'count' => 0];
+                    }
+                    $fieldCounts['source_author'][$result['source_author']]['count']++;
+    
+                    // Compter les occurrences de 'source_title'
+                    if (!isset($fieldCounts['source_title'][$result['source_title']])) {
+                        $fieldCounts['source_title'][$result['source_title']] = ['value' => $result['source_title'], 'count' => 0];
+                    }
+                    $fieldCounts['source_title'][$result['source_title']]['count']++;
+    
+                    // Compter les occurrences de 'source_year'
+                    if (!isset($fieldCounts['source_year'][$result['source_year']])) {
+                        $fieldCounts['source_year'][$result['source_year']] = ['value' => $result['source_year'], 'count' => 0];
+                    }
+                    $fieldCounts['source_year'][$result['source_year']]['count']++;
+    
+                    if (isset($result['source_length'])) {
+                        // Calculer la plage d'intervalle (de 0-100, 101-200, etc.)
+                        $length = (int) $result['source_length'];
+                        $rangeStart = (int) floor($length / 1000) * 1000;
+                        $rangeEnd = $rangeStart + 1000;
+    
+                        // Créer une clé pour l'intervalle, par exemple "0-100", "101-200", etc.
+                        $rangeKey = $rangeStart . '-' . $rangeEnd;
+    
+                        // Vérifier si cette plage existe déjà dans les comptes
+                        if (!isset($fieldCounts['source_length'][$rangeKey])) {
+                            $fieldCounts['source_length'][$rangeKey] = ['value' => $rangeKey, 'count' => 0];
+                        }
+                        $fieldCounts['source_length'][$rangeKey]['count']++;
+                    }
+    
+    
+                    // Compter les occurrences de 'target_content'
+                    if (!isset($fieldCounts['target_content'][$result['target_content']])) {
+                        $fieldCounts['target_content'][$result['target_content']] = ['value' => $result['target_content'], 'count' => 0];
+                    }
+                    $fieldCounts['target_content'][$result['target_content']]['count']++;
+    
+                    // Compter les occurrences de 'target_author'
+                    if (!isset($fieldCounts['target_author'][$result['target_author']])) {
+                        $fieldCounts['target_author'][$result['target_author']] = ['value' => $result['target_author'], 'count' => 0];
+                    }
+                    $fieldCounts['target_author'][$result['target_author']]['count']++;
+    
+                    // Compter les occurrences de 'target_title'
+                    if (!isset($fieldCounts['target_title'][$result['target_title']])) {
+                        $fieldCounts['target_title'][$result['target_title']] = ['value' => $result['target_title'], 'count' => 0];
+                    }
+                    $fieldCounts['target_title'][$result['target_title']]['count']++;
+    
+                    // Compter les occurrences de 'target_year'
+                    if (!isset($fieldCounts['target_year'][$result['target_year']])) {
+                        $fieldCounts['target_year'][$result['target_year']] = ['value' => $result['target_year'], 'count' => 0];
+                    }
+                    $fieldCounts['target_year'][$result['target_year']]['count']++;
+    
+                    // Compter les occurrences de 'target_length'
+                    //  if (!isset($fieldCounts['target_length'][$result['target_length']])) {
+                    //     $fieldCounts['target_length'][$result['target_length']] = ['value' => $result['target_length'], 'count' => 0];
+                    // }
+                    // $fieldCounts['target_length'][$result['target_length']]['count']++;
+    
+                    if (isset($result['target_length'])) {
+                        // Calculer la plage d'intervalle (de 0-100, 101-200, etc.)
+                        $length = (int) $result['target_length'];
+                        $rangeStart = (int) floor($length / 1000) * 1000;
+                        $rangeEnd = $rangeStart + 1000;
+    
+                        // Créer une clé pour l'intervalle, par exemple "0-100", "101-200", etc.
+                        $rangeKey = $rangeStart . '-' . $rangeEnd;
+    
+                        // Vérifier si cette plage existe déjà dans les comptes
+                        if (!isset($fieldCounts['target_length'][$rangeKey])) {
+                            $fieldCounts['target_length'][$rangeKey] = ['value' => $rangeKey, 'count' => 0];
+                        }
+                        $fieldCounts['target_length'][$rangeKey]['count']++;
+                    }
                 }
-                $fieldCounts['source_content'][$result['source_content']]['count']++;
-
-                // Compter les occurrences de 'source_author'
-                if (!isset($fieldCounts['source_author'][$result['source_author']])) {
-                    $fieldCounts['source_author'][$result['source_author']] = ['value' => $result['source_author'], 'count' => 0];
+    
+    
+    
+                // Transformer chaque ensemble de valeurs en un tableau d'objets
+                foreach ($fieldCounts as $field => $values) {
+                    $fieldCounts[$field] = array_values($values); // Extraire les objets dans un tableau indexé
                 }
-                $fieldCounts['source_author'][$result['source_author']]['count']++;
 
-                // Compter les occurrences de 'source_title'
-                if (!isset($fieldCounts['source_title'][$result['source_title']])) {
-                    $fieldCounts['source_title'][$result['source_title']] = ['value' => $result['source_title'], 'count' => 0];
-                }
-                $fieldCounts['source_title'][$result['source_title']]['count']++;
-
-                // Compter les occurrences de 'source_year'
-                if (!isset($fieldCounts['source_year'][$result['source_year']])) {
-                    $fieldCounts['source_year'][$result['source_year']] = ['value' => $result['source_year'], 'count' => 0];
-                }
-                $fieldCounts['source_year'][$result['source_year']]['count']++;
-
-                // Compter les occurrences de 'target_content'
-                if (!isset($fieldCounts['target_content'][$result['target_content']])) {
-                    $fieldCounts['target_content'][$result['target_content']] = ['value' => $result['target_content'], 'count' => 0];
-                }
-                $fieldCounts['target_content'][$result['target_content']]['count']++;
-
-                // Compter les occurrences de 'target_author'
-                if (!isset($fieldCounts['target_author'][$result['target_author']])) {
-                    $fieldCounts['target_author'][$result['target_author']] = ['value' => $result['target_author'], 'count' => 0];
-                }
-                $fieldCounts['target_author'][$result['target_author']]['count']++;
-
-                // Compter les occurrences de 'target_title'
-                if (!isset($fieldCounts['target_title'][$result['target_title']])) {
-                    $fieldCounts['target_title'][$result['target_title']] = ['value' => $result['target_title'], 'count' => 0];
-                }
-                $fieldCounts['target_title'][$result['target_title']]['count']++;
-
-                // Compter les occurrences de 'target_year'
-                if (!isset($fieldCounts['target_year'][$result['target_year']])) {
-                    $fieldCounts['target_year'][$result['target_year']] = ['value' => $result['target_year'], 'count' => 0];
-                }
-                $fieldCounts['target_year'][$result['target_year']]['count']++;
+                return new JsonResponse([
+                    'total_count' => $totalCount,
+                    'results' => $results,
+                    'grouped_results' => $fieldCounts,  // Les comptes de chaque champ // Les résultats groupés après regroupement
+                    'lastId' => $lastId,
+                    'role' => $role
+                ]);
             }
 
-            // Transformer chaque ensemble de valeurs en un tableau d'objets
-            foreach ($fieldCounts as $field => $values) {
-                $fieldCounts[$field] = array_values($values); // Extraire les objets dans un tableau indexé
-            }
+
 
             return new JsonResponse([
                 'total_count' => $totalCount,
                 'results' => $results,
-                'grouped_results' => $fieldCounts,  // Les comptes de chaque champ // Les résultats groupés après regroupement
+                // 'grouped_results' => $fieldCounts,  // Les comptes de chaque champ // Les résultats groupés après regroupement
                 'lastId' => $lastId,
                 'role' => $role
             ]);

@@ -54,53 +54,87 @@ class AdminAlignmentController extends AbstractController
 
 
 
-        // Construire la requête
-        if ($start !== $end) {
-            $sql = "SELECT alignment.id as ID, alignment.*, evaluation.* 
-            FROM alignment 
-            LEFT JOIN evaluation ON evaluation.alignment_id = alignment.id 
+        // // Construire la requête
+        // if ($start !== $end) {
+        //     $sql = "SELECT alignment.id as ID, 
+        //     alignment.source_before,
+        //     SUBSTRING(alignment.source_content, 1, 1600) AS source_content, -- Limiter à 1500 caractères
+        //     alignment.source_after,
+        //     alignment.source_author,
+        //     alignment.source_title,
+        //     alignment.source_year,
+        //     alignment.source_length,
+        //     alignment.source_genre,
+        //     alignment.target_author,
+        //     alignment.target_before,
+        //     SUBSTRING(alignment.target_content, 1, 1600) AS target_content, -- Limiter à 1500 caractères
+        //     alignment.target_after,
+        //     alignment.target_title, 
+        //     alignment.target_year,
+        //     alignment.target_length,
+        //     alignment.target_genre,
+        //     evaluation.* 
+        //     FROM alignment 
+        //     LEFT JOIN evaluation ON evaluation.alignment_id = alignment.id 
             
-            WHERE alignment.id > ? AND
-            source_content LIKE ? AND
-            source_author LIKE ? AND 
-            source_title LIKE ? AND
-            source_year LIKE ? AND
-            target_content LIKE ? AND
-            target_author LIKE ? AND 
-            target_title LIKE ? AND
-            target_year LIKE ? AND 
-            alignment.id BETWEEN ? AND ? 
-            ORDER BY alignment.id ASC
-            LIMIT 50";
+        //     WHERE alignment.id > ? AND
+        //     source_content LIKE ? AND
+        //     source_author LIKE ? AND 
+        //     source_title LIKE ? AND
+        //     source_year LIKE ? AND
+        //     target_content LIKE ? AND
+        //     target_author LIKE ? AND 
+        //     target_title LIKE ? AND
+        //     target_year LIKE ? AND 
+        //     alignment.id BETWEEN ? AND ? 
+        //     ORDER BY alignment.id ASC
+        //     LIMIT 50";
 
-            $countSql = "SELECT COUNT(*) as total_count
-            FROM alignment 
-            WHERE 
-            source_content LIKE ? AND
-            source_author LIKE ? AND 
-            source_title LIKE ? AND
-            source_year LIKE ? AND
-            target_content LIKE ? AND
-            target_author LIKE ? AND 
-            target_title LIKE ? AND
-            target_year LIKE ? AND 
-            alignment.id BETWEEN ? AND ?";
+        //     $countSql = "SELECT COUNT(*) as total_count
+        //     FROM alignment 
+        //     WHERE 
+        //     source_content LIKE ? AND
+        //     source_author LIKE ? AND 
+        //     source_title LIKE ? AND
+        //     source_year LIKE ? AND
+        //     target_content LIKE ? AND
+        //     target_author LIKE ? AND 
+        //     target_title LIKE ? AND
+        //     target_year LIKE ? AND 
+        //     alignment.id BETWEEN ? AND ?";
 
-            $values = [
-                $lastId,
-                $sourceContent,
-                $sourceAuthor,
-                $sourceTitle,
-                $sourceYear,
-                $targetContent,
-                $targetAuthor,
-                $targetTitle,
-                $targetYear,
-                $start,
-                $end
-            ];
-        } else {
-            $sql = "SELECT alignment.id as ID, alignment.*, evaluation.* 
+        //     $values = [
+        //         $lastId,
+        //         $sourceContent,
+        //         $sourceAuthor,
+        //         $sourceTitle,
+        //         $sourceYear,
+        //         $targetContent,
+        //         $targetAuthor,
+        //         $targetTitle,
+        //         $targetYear,
+        //         $start,
+        //         $end
+        //     ];
+        // } else {
+            $sql = "SELECT alignment.id as ID, 
+            alignment.source_before,
+            SUBSTRING(alignment.source_content, 1, 1600) AS source_content, -- Limiter à 1500 caractères
+            alignment.source_after,
+            alignment.source_author,
+            alignment.source_title,
+            alignment.source_year,
+            alignment.source_length,
+            alignment.source_genre,
+            alignment.target_author,
+            alignment.target_before,
+            SUBSTRING(alignment.target_content, 1, 1600) AS target_content, -- Limiter à 1500 caractères
+            alignment.target_after,
+            alignment.target_title, 
+            alignment.target_year,
+            alignment.target_length,
+            alignment.target_genre,
+            evaluation.* 
             FROM alignment 
             LEFT JOIN evaluation ON evaluation.alignment_id = alignment.id 
             
@@ -139,7 +173,7 @@ class AdminAlignmentController extends AbstractController
                 $targetTitle,
                 $targetYear
             ];
-        }
+        // }
 
         // Log pour vérifier lastId
         error_log('last_id reçu dans la requête: ' . $lastId);
